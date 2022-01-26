@@ -1,0 +1,1 @@
+PRF:: foo is a local symbol 1 times!
