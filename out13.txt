@@ -1,0 +1,3 @@
+hello intel x64
+good
+PRF:: the syscall in 0x4000cd returned with -14

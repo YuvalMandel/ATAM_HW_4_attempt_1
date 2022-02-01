@@ -1,0 +1,7 @@
+hello intel x64
+22345678
+32345678
+42345678
+PRF:: the syscall in 0x4000d4 returned with -14
+PRF:: the syscall in 0x4000d4 returned with -14
+PRF:: the syscall in 0x4000d4 returned with -14

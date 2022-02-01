@@ -1,0 +1,3 @@
+hello intel x64
+12345678
+PRF:: the syscall in 0x40012d returned with -9
