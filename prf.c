@@ -42,69 +42,73 @@ void syscall_debugger(pid_t pid, unsigned long addr){
 
             ptrace(PTRACE_CONT, pid, NULL, NULL);
             wait(&wait_status);
+            continue;
 
-        }else{
+        }
 
-            unsigned long old_rsp = regs.rsp;
-            unsigned long old_ra = ptrace(PTRACE_PEEKTEXT, pid, (void*)old_rsp, NULL);
-            unsigned long first_instruction_of_ra = ptrace(PTRACE_PEEKTEXT, pid, (void*)old_ra, NULL);
-            unsigned long trapped_first_instruction_of_ra = (first_instruction_of_ra & 0xFFFFFFFFFFFFFF00) | 0xCC;
+        unsigned long old_rsp = regs.rsp;
+        unsigned long old_ra = ptrace(PTRACE_PEEKTEXT, pid, (void*)old_rsp, NULL);
+        unsigned long first_instruction_of_ra = ptrace(PTRACE_PEEKTEXT, pid, (void*)old_ra, NULL);
+        unsigned long trapped_first_instruction_of_ra = (first_instruction_of_ra & 0xFFFFFFFFFFFFFF00) | 0xCC;
 
-            ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
-            ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data);
-            regs.rip -= 1;
-            ptrace(PTRACE_SETREGS, pid, 0, &regs);
+        ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
+        ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data);
+        regs.rip -= 1;
+        ptrace(PTRACE_SETREGS, pid, 0, &regs);
 
-            while(1){
+        while(1){
 
-                ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
-                wait(&wait_status);
-                ptrace(PTRACE_GETREGS, pid, 0, &regs);
+            ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+            wait(&wait_status);
+            ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-                if(regs.rip == old_ra + 1){
-                    if((regs.rsp - sizeof(uint64_t)) == old_rsp){
-                        ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
-                        wait(&wait_status);
-                        ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
-                    } else{
-                        ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)first_instruction_of_ra);
-                        regs.rip -= 1;
-                        ptrace(PTRACE_SETREGS, pid, 0, &regs);
-                        unsigned short opcode = first_instruction_of_ra & 0xFFFF;
-                        if((opcode == 0x050F) || (opcode == 0x80CD)){
-                            ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
-                            wait(&wait_status);
-                            ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
-                            wait(&wait_status);
-                            ptrace(PTRACE_GETREGS, pid, 0, &regs);
-                            if((long)regs.rax < 0){
-                                printf("PRF:: the syscall in 0x%llx returned with %lld\n", regs.rip - 2, regs.rax);
-                            }
-                            ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
-                        }else{
-                            ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
-                            wait(&wait_status);
-                            ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
-                        }
-                        continue;
-                    }
-                }else{
-                    ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+            if(regs.rip == old_ra + 1){
+                if((regs.rsp - sizeof(uint64_t)) == old_rsp){ 
+                    ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
                     wait(&wait_status);
-                    if(WIFEXITED(wait_status)){
-                        return;
-                    }else{
+                    ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
+                    break;
+                } else{
+                    ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)first_instruction_of_ra);
+                    regs.rip -= 1;
+                    ptrace(PTRACE_SETREGS, pid, 0, &regs);
+                    unsigned short opcode = first_instruction_of_ra & 0xFFFF;
+                    if((opcode == 0x050F) || (opcode == 0x80CD)){
+                        ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+                        wait(&wait_status);
+                        ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+                        wait(&wait_status);
                         ptrace(PTRACE_GETREGS, pid, 0, &regs);
                         if((long)regs.rax < 0){
                             printf("PRF:: the syscall in 0x%llx returned with %lld\n", regs.rip - 2, regs.rax);
                         }
+                        ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
+                        continue;
+                    }else{
+                        ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
+                        wait(&wait_status);
+                        ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
+                        continue;
                     }
+//                        continue;
                 }
             }
+            ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+            wait(&wait_status);
+            if(WIFEXITED(wait_status)){
+                return;
+            }else{
+                ptrace(PTRACE_GETREGS, pid, 0, &regs);
+                if((long)regs.rax < 0){
+                    printf("PRF:: the syscall in 0x%llx returned with %lld\n", regs.rip - 2, regs.rax);
+                }
+            }
+
         }
         ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data_trap);
         ptrace(PTRACE_CONT, pid, NULL, NULL);
         wait(&wait_status);
+
     }
     return;
 }
