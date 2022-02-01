@@ -28,13 +28,13 @@ bool cmp_symbol_name(FILE* elf_file, Elf64_Off offset, Elf64_Word st_name, char*
 
 }
 
-unsigned long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_count){
+long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_count){
 	
 	Elf64_Ehdr elf_file_header;
 	
-	FILE* elf_file = fopen(exe_file_name, "rb");
+	FILE* elf_file = fopen(exe_file_name, "r");
 	
-	fread(&elf_file_header, sizeof(elf_file_header), 1, elf_file);
+	fread(&elf_file_header, sizeof(Elf64_Ehdr), 1, elf_file);
 	
 	if(elf_file_header.e_type != 0x02){
 		return ELF_NOT_EXEC;
@@ -65,7 +65,7 @@ unsigned long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* 
 	Elf64_Addr global_symbol_val;
 	
 	for(Elf64_Xword i = 0; i < num_symbols; i++){
-		if(cmp_symbol_name(elf_file, section_headers_table[section_headers_table[symb_table_index].sh_link].sh_offset, sym_table[symb_table_index].st_name, symbol_name)){
+		if(cmp_symbol_name(elf_file, section_headers_table[section_headers_table[symb_table_index].sh_link].sh_offset, sym_table[i].st_name, symbol_name)){
 			if(ELF64_ST_BIND(sym_table[i].st_info) == 1){
 				symbol_global_exists = true;
 				global_symbol_val = sym_table[i].st_value;

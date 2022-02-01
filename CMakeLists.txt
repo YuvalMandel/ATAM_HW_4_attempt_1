@@ -3,4 +3,4 @@ project(ATAM_HW_4_attempt_1 C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(ATAM_HW_4_attempt_1 prf.c elf_decoder.h)
+add_executable(ATAM_HW_4_attempt_1 prf.c elf_decoder.c)

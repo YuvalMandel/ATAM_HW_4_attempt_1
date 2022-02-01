@@ -6,6 +6,11 @@
 #include <unistd.h>
 #include <sys/reg.h>
 #include <sys/user.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdlib.h>
+
 
 #define SYSCALL_BYTES 0x50f
 
@@ -16,20 +21,24 @@ void syscall_debugger(pid_t pid, unsigned long addr){
 
     wait(&wait_status);
 
-    unsigned long addr_internal= addr;
-    unsigned  long data = ptrace(PTRACE_GETREGS, pid, (void*)addr_internal, &regs);
+    unsigned long data = ptrace(PTRACE_PEEKTEXT, pid, (void*)addr, &regs);
 
     unsigned long data_trap = (data & 0xFFFFFFFFFFFFFF00) | 0xCC;
-    ptrace(PTRACE_POKETEXT, pid, (void*)addr_internal, (void*)data_trap);
+    long int temp = ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data_trap);
 
-    ptrace(PTRACE_CONT, pid, NULL, NULL);
+//    printf("temp %ld\n", temp);
+
+    temp = ptrace(PTRACE_CONT, pid, NULL, NULL);
+
+//    printf("temp %ld\n", temp);
+
     wait(&wait_status);
 
     while(WIFSTOPPED(wait_status)){
 
         ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-        if(regs.rip != addr_internal + 1){
+        if(regs.rip != addr + 1){
 
             ptrace(PTRACE_CONT, pid, NULL, NULL);
             wait(&wait_status);
@@ -42,7 +51,7 @@ void syscall_debugger(pid_t pid, unsigned long addr){
             unsigned long trapped_first_instruction_of_ra = (first_instruction_of_ra & 0xFFFFFFFFFFFFFF00) | 0xCC;
 
             ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
-            ptrace(PTRACE_POKETEXT, pid, (void*)addr_internal, (void*)data);
+            ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data);
             regs.rip -= 1;
             ptrace(PTRACE_SETREGS, pid, 0, &regs);
 
@@ -93,7 +102,7 @@ void syscall_debugger(pid_t pid, unsigned long addr){
                 }
             }
         }
-        ptrace(PTRACE_POKETEXT, pid, (void*)addr_internal, (void*)data_trap);
+        ptrace(PTRACE_POKETEXT, pid, (void*)addr, (void*)data_trap);
         ptrace(PTRACE_CONT, pid, NULL, NULL);
         wait(&wait_status);
     }
@@ -104,7 +113,7 @@ int main(int argc, char* argv[]) {
 
     char* function = argv[1];
     char* program = argv[2];
-    int local_count;
+    unsigned int local_count;
 
     // Check elf file.
     long result = find_symbol(function, program, &local_count);
@@ -124,7 +133,10 @@ int main(int argc, char* argv[]) {
 
     if(pid == 0){
         // Child process
-        if(ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0){
+
+        long temp = ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+
+        if(temp < 0){
             perror("ptrace");
             exit(1);
         }
@@ -136,7 +148,7 @@ int main(int argc, char* argv[]) {
 
     }else{
         // Error in fork
-        perror("ptrace");
+        perror("fork");
         exit(1);
     }
 

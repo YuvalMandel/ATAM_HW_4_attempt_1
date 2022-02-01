@@ -15,6 +15,6 @@
 #define SYMBOL_NAME_NOT_GLOBAL -2
 #define ELF_NOT_EXEC -3
 
-unsigned long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_count);
+long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_count);
 
 #endif //ATAM_HW_4_ATTEMPT_1_ELF_DECODER_H
