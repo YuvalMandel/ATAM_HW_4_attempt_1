@@ -63,10 +63,10 @@ void syscall_debugger(pid_t pid, unsigned long addr){
             ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
             if(regs.rip == old_ra + 1){
-                if((regs.rsp - sizeof(uint64_t)) == old_rsp){ 
-                    ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
-                    wait(&wait_status);
-                    ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)trapped_first_instruction_of_ra);
+                if((regs.rsp - sizeof(uint64_t)) == old_rsp){
+                    ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)first_instruction_of_ra);
+                    regs.rip -= 1;
+                    ptrace(PTRACE_SETREGS, pid, 0, &regs);
                     break;
                 } else{
                     ptrace(PTRACE_POKETEXT, pid, (void*)old_ra, (void*)first_instruction_of_ra);
