@@ -8,9 +8,7 @@
 bool cmp_symbol_name(FILE* elf_file, Elf64_Off offset, Elf64_Word st_name, char* symbol_name){
 
     fseek(elf_file, offset + st_name, SEEK_SET);
-
     char  temp;
-
     for (int i = 0; i < strlen(symbol_name); ++i) {
         fread(&temp, sizeof(char), 1, elf_file);
         if(temp == '\0' || temp != symbol_name[i]){
@@ -19,7 +17,6 @@ bool cmp_symbol_name(FILE* elf_file, Elf64_Off offset, Elf64_Word st_name, char*
     }
 
     fread(&temp, sizeof(char), 1, elf_file);
-
     if(temp == '\0'){
         return true;
     }else{
@@ -31,22 +28,17 @@ bool cmp_symbol_name(FILE* elf_file, Elf64_Off offset, Elf64_Word st_name, char*
 long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_count){
 	
 	Elf64_Ehdr elf_file_header;
-	
 	FILE* elf_file = fopen(exe_file_name, "r");
-	
 	fread(&elf_file_header, sizeof(Elf64_Ehdr), 1, elf_file);
-	
 	if(elf_file_header.e_type != 0x02){
 		return ELF_NOT_EXEC;
 	}
 
 	fseek(elf_file, elf_file_header.e_shoff, SEEK_SET);
-
 	Elf64_Shdr* section_headers_table = (Elf64_Shdr*)malloc(sizeof(Elf64_Shdr)*(elf_file_header.e_shnum));
 	fread(section_headers_table, sizeof(Elf64_Shdr), elf_file_header.e_shnum, elf_file);
 	
 	int symb_table_index;
-
 	for(Elf64_Half i = 0; i < elf_file_header.e_shnum; i++){
 		if(section_headers_table[i].sh_type == 2){
 			symb_table_index = i;
@@ -55,7 +47,6 @@ long find_symbol(char* symbol_name, char* exe_file_name, unsigned int* local_cou
 	}
 
 	fseek(elf_file, section_headers_table[symb_table_index].sh_offset, SEEK_SET);
-	
 	Elf64_Xword num_symbols = section_headers_table[symb_table_index].sh_size/section_headers_table[symb_table_index].sh_entsize;
 	Elf64_Sym* sym_table = (Elf64_Sym*)malloc(sizeof(Elf64_Sym)*num_symbols);
 	fread(sym_table, sizeof(Elf64_Sym), num_symbols, elf_file);
